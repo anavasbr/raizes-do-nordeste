@@ -1,4 +1,3 @@
-// Exercita os ouvintes da aplicação com eventos em memória, sem motor de layout.
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const events={},pending=[],saved=new Map();
 const main={addEventListener:(event,fn)=>events[event]=fn,querySelector:()=>null};

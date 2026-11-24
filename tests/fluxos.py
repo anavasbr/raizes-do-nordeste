@@ -1,4 +1,3 @@
-"""Executar com Playwright para Python e Chromium. BASE_URL aponta para o site estático."""
 import os
 from pathlib import Path
 from playwright.sync_api import sync_playwright
