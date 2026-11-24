@@ -1,0 +1,48 @@
+"""Executar com Playwright para Python e Chromium. BASE_URL aponta para o site estático."""
+import os
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+url=os.getenv('BASE_URL','http://localhost:8463')
+out=Path(os.environ.get('EVIDENCE_DIR','evidence'));out.mkdir(exist_ok=True)
+with sync_playwright() as driver:
+ browser=driver.chromium.launch(executable_path=os.getenv('CHROMIUM','/usr/bin/chromium'),args=['--no-sandbox'])
+ p=browser.new_page(viewport={'width':1440,'height':1000},locale='pt-BR')
+ errors=[];p.on('pageerror',lambda e:errors.append(str(e)))
+ def click(s):p.locator(s).first.click()
+ def ok(n,condition):
+  assert condition,n
+  print(n,'OK',flush=True)
+ p.goto(url);p.screenshot(path=out/'desktop.png',full_page=True)
+ ok('T01 Carrinho vazio',p.locator('[data-go]').is_disabled())
+ click('[data-cat="Bebidas"]');ok('T02 Filtro',p.locator('.product').count()==2);click('[data-cat="Todos"]')
+ click('[data-add=cuscuz]');p.once('dialog',lambda d:d.dismiss());p.select_option('#unit',index=1)
+ ok('T03 Cancelar troca',p.locator('.count').inner_text()=='1' and p.locator('#unit').input_value().startswith('Recife'))
+ p.once('dialog',lambda d:d.accept());p.select_option('#unit',index=1)
+ ok('T04 Troca e estoque local',p.locator('.count').inner_text()=='0' and p.locator('[data-add=tapioca]').is_disabled())
+ p.select_option('#unit',index=0)
+ for _ in range(4):click('[data-add=cuscuz]')
+ click('[data-go]');p.wait_for_selector('#enroll')
+ ok('T05 Adesão opcional',not p.locator('#enroll').is_checked());p.check('#enroll')
+ for value in ['recusa','falha']:
+  p.select_option('#result',value);click('[data-pay]');p.wait_for_selector('[role=alert]');ok('T06 '+value,p.locator('[role=alert]').count()==1 and p.evaluate('db.orders.length===0 && db.cart.cuscuz===4 && db.points===0'))
+ p.select_option('#result','ok');click('[data-pay]');p.wait_for_selector('.stages')
+ ok('T07 Confirmação',p.evaluate('db.orders.length===1 && db.points===51 && available(db,products[0])===5'))
+ p.reload();p.wait_for_selector('.stages');ok('T08 Persistência',p.get_by_text('Pedido RN-001').count()==1)
+ click('a[href="#operacao"]')
+ for i in range(3):click('[data-next]')
+ ok('T09 Fila e entrega',p.locator('[data-next]').count()==0 and p.evaluate('db.orders[0].stage===3'));p.screenshot(path=out/'operacao.png')
+ click('nav a[href="#menu"]');click('[data-add=cafe]');click('[data-go]');p.wait_for_selector('#channel')
+ ok('T10 Desconto progressivo',p.locator('.total').inner_text().endswith('5,60') and p.evaluate('totals({...db,points:100},true).rate===10'))
+ for ch in ['Totem','Balcão']:
+  p.select_option('#channel',ch);ok('T11 '+ch,p.locator('#enroll').count()==0 and p.locator('.total').inner_text().endswith('5,90'))
+ click('[data-pay]');p.wait_for_selector('.stages');p.once('dialog',lambda d:d.accept());click('[data-revoke]');ok('T12 Revogação',p.evaluate('db.points===0 && !db.consent && db.orders.length===2'))
+ click('nav a[href="#menu"]')
+ ok('T13 Sazonalidade',p.evaluate('available(db,product("milho"),11)===0 && available(db,product("milho"),6)===5'))
+ for _ in range(5):click('[data-add=cuscuz]')
+ ok('T14 Limite da sacola',p.locator('.product [data-add=cuscuz]').is_disabled());click('[data-less=cuscuz]')
+ ok('T15 Remoção',p.evaluate('db.cart.cuscuz===4'))
+ p.set_viewport_size({'width':390,'height':844});p.screenshot(path=out/'mobile.png')
+ ok('T16 Layout 390 px',p.evaluate('document.documentElement.scrollWidth===innerWidth'));click('[data-jump]');click('[data-go]');p.wait_for_selector('#channel')
+ ok('T17 Checkout móvel',p.evaluate('document.documentElement.scrollWidth===innerWidth') and p.locator('[data-pay]').is_visible())
+ ok('T18 Console',not errors)
+ browser.close()

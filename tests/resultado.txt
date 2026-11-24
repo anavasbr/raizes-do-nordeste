@@ -1,0 +1,18 @@
+R01 · Pedido vazio | aprovado
+R02 · Cardápio por unidade | aprovado
+R03 · Sazonalidade | aprovado
+R04 · Limite de estoque | aprovado
+R05 · Recusa sem mutação | aprovado
+R06 · Falha sem mutação | aprovado
+R07 · Aprovação e pontos | aprovado
+R08 · Repetir confirmação | aprovado
+R09 · Desconto em centavos | aprovado
+R10 · Totem avulso | aprovado
+R11 · Balcão avulso | aprovado
+R12 · Persistência | aprovado
+R13 · Filtro de bebidas | aprovado
+R14 · Indicadores locais | aprovado
+R15 · Filtro de unidade | aprovado
+R16 · Aviso de retirada | aprovado
+R17 · Etapa final | aprovado
+R18 · Compra sem adesão | aprovado

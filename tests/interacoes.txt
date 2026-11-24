@@ -1,0 +1,10 @@
+I01 · Adicionar | aprovado
+I02 · Troca confirmada | aprovado
+I03 · Aguardando retorno | aprovado
+I04 · Recusa visual | aprovado
+I05 · Duplo clique | aprovado
+I06 · Número do pedido | aprovado
+I07 · Limite da fila | aprovado
+I08 · Revogação | aprovado
+I09 · Retirada no totem | aprovado
+I10 · Abandono antes do retorno | aprovado

@@ -1,0 +1,32 @@
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
+const dist=path.join(__dirname,'../docs');
+const html={innerHTML:'',addEventListener(){},querySelector(){return null}};
+const storage=new Map();
+const ctx=vm.createContext({location:{hash:''},document:{querySelector:()=>html,querySelectorAll:()=>[]},window:{addEventListener(){}},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},setTimeout,clearTimeout});
+const run=code=>vm.runInContext(code,ctx);
+for(const file of ['model.js','app.js'])run(fs.readFileSync(path.join(dist,file),'utf8'));
+function test(id,expr){assert.ok(run(expr),id);console.log(id+' | aprovado')}
+run('db=initial(); const send=(result="ok",channel="Aplicativo",enroll=true)=>buy(db,{channel,enroll,result})');
+test('R01 · Pedido vazio','!!send().error && !db.orders.length');
+test('R02 · Cardápio por unidade','available(db,product("tapioca"))===8 && (db.unit=1,available(db,product("tapioca"))===0)');
+test('R03 · Sazonalidade','available(db,product("milho"),6)===3 && available(db,product("milho"),11)===0');
+run('db.unit=0;db.cart={cuscuz:10}');
+test('R04 · Limite de estoque','!!send().error && !db.orders.length');
+run('db.cart={cuscuz:4}');
+test('R05 · Recusa sem mutação','!!send("recusa").error && db.cart.cuscuz===4 && !db.points && !db.orders.length');
+test('R06 · Falha sem mutação','!!send("falha").error && db.cart.cuscuz===4 && !db.points && !db.orders.length');
+test('R07 · Aprovação e pontos','send().order.total===5160 && db.points===51 && !Object.keys(db.cart).length && available(db,products[0])===5');
+test('R08 · Repetir confirmação','!!send().error && db.orders.length===1 && db.points===51');
+run('db.cart={cafe:1}');
+test('R09 · Desconto em centavos','totals(db,true).rate===5 && totals(db,true).total===560 && totals({...db,points:100},true).total===531');
+test('R10 · Totem avulso','send("ok","Totem").order.total===590 && db.points===51');
+run('db.cart={bolo:1}');
+test('R11 · Balcão avulso','send("ok","Balcão").order.earned===0 && db.orders.length===3');
+test('R12 · Persistência','(save(), JSON.parse(localStorage.getItem(key)).orders.length===3)');
+test('R13 · Filtro de bebidas','(category="Bebidas",menu().includes("Suco de cajá") && !menu().includes("Tapioca de coalho"))');
+test('R14 · Indicadores locais','ops().includes("66,40") && ops().includes("Cuscuz na manteiga")');
+test('R15 · Filtro de unidade','(filter=units[1],ops().includes("Nenhum pedido"))');
+test('R16 · Aviso de retirada','(db.orders[0].stage=2,orders().includes("Apresente RN-001"))');
+test('R17 · Etapa final','(db.orders[0].stage=3,!ticket(db.orders[0],true).includes("data-next"))');
+test('R18 · Compra sem adesão','(db=initial(),db.cart={cafe:1},send("ok","Aplicativo",false).order.earned===0 && !db.consent)');
+if(process.env.RENDER_DIR){const out=process.env.RENDER_DIR;run('db=initial();category="Todos"');const base=fs.readFileSync(path.join(dist,'index.html'),'utf8');for(const [name,cmd] of [['desktop','menu()'],['checkout','(db.cart={cuscuz:4},checkout())'],['operacao','(send(),filter="Todas as unidades",ops())']])fs.writeFileSync(path.join(out,name+'.html'),base.replace('<main id="main"></main>','<main id="main">'+run(cmd)+'</main>'))}
